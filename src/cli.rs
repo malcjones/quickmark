@@ -18,10 +18,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// List the all, or first N, bookmarks
+    /// List bookmarks
     List {
-        /// Number of bookmarks to list
-        n: Option<usize>,
+        /// Number of bookmarks to list (default: all)
+        limit: Option<usize>,
     },
     /// Add a new bookmark
     Add {
@@ -46,11 +46,16 @@ enum Commands {
         #[clap(short, long)]
         fuzzy: bool,
     },
+    /// Open a bookmark in the default browser
+    Open {
+        /// Index of the bookmark to open
+        index: usize,
+    },
 }
 
-fn cmd_list(filename: &str, n: Option<usize>) {
+fn cmd_list(filename: &str, limit: Option<usize>) {
     let bookmarks = load_multi(filename).unwrap_or_default();
-    bookmarks[..n.unwrap_or(bookmarks.len())]
+    bookmarks[0..limit.unwrap_or(bookmarks.len())]
         .iter()
         .enumerate()
         .for_each(|(i, b)| {
@@ -90,13 +95,25 @@ fn cmd_search(filename: &str, query: &str, fuzzy: bool) {
             println!("{}", b.pretty());
         });
 }
+
+fn cmd_open(filename: &str, index: usize) {
+    let bookmarks = load_multi(filename).unwrap_or_default();
+    if index < bookmarks.len() {
+        let _ = webbrowser::open(&bookmarks[index].url);
+    } else {
+        eprintln!("Index out of bounds");
+    }
+}
+
+
 pub fn run_cli() {
     let args = Cli::parse();
     match args.command {
-        Some(Commands::List { n }) => cmd_list(&args.filename, n),
+        Some(Commands::Open { index }) => cmd_open(&args.filename, index),
+        Some(Commands::List { limit }) => cmd_list(&args.filename, limit),
         Some(Commands::Add { name, url, tags }) => cmd_add(&args.filename, &name, &url, tags),
         Some(Commands::Remove { index }) => cmd_remove(&args.filename, index),
         Some(Commands::Search { query, fuzzy }) => cmd_search(&args.filename, &query, fuzzy),
-        None => eprintln!("No command provided"),
+        None => eprintln!("No command provided. Try `qm help`"),
     }
 }
