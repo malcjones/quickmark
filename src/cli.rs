@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use rayon::prelude::*;
 use quickmark::{file::{load_multi, save_multi}, Bookmark};
 
 #[derive(Parser)]
@@ -35,8 +36,11 @@ enum Commands {
     },
     /// Search for bookmarks by tag
     Search {
-        /// Tag to search for
-        tag: String,
+        /// Query
+        query: String,
+
+        #[clap(short, long)]
+        fuzzy: bool,
     },
 }
 
@@ -66,16 +70,23 @@ fn cmd_remove(filename: &str, index: usize) {
     }
 }
 
-fn cmd_search(filename: &str, tag: &str) {
-    load_multi(filename).unwrap_or_default()
-        .iter()
-        .enumerate()
-        .filter(|(_, b)| b.tags.contains(&tag.to_owned()))
-        .for_each(|(i, b)| {
-            println!("{i}. {}", b.pretty());
+fn cmd_search(filename: &str, query: &str, fuzzy: bool) {
+    let bookmarks = load_multi(filename).unwrap_or_default();
+    let query = query.to_lowercase();
+    bookmarks
+        .par_iter()
+        .filter(|b| {
+            if fuzzy {
+                b.serialize().to_lowercase().contains(&query)
+            } else {
+                b.tags.iter().any(|tag| tag.contains(&query))
+            }
+        })
+        .for_each(|b| {
+            println!("{}", b.pretty());
         });
+    
 }
-
 pub fn run_cli() {
     let args = Cli::parse();
     let filename = args.filename.unwrap_or("bookmarks.qm".to_owned());
@@ -83,7 +94,7 @@ pub fn run_cli() {
         Some(Commands::List { n }) => cmd_list(&filename, n),
         Some(Commands::Add { name, url, tags }) => cmd_add(&filename, &name, &url, tags),
         Some(Commands::Remove { index }) => cmd_remove(&filename, index),
-        Some(Commands::Search { tag }) => cmd_search(&filename, &tag),
+        Some(Commands::Search { query, fuzzy }) => cmd_search(&filename, &query, fuzzy),
         None => eprintln!("No command provided"),
     }
 }
