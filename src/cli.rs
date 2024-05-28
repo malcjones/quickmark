@@ -1,13 +1,16 @@
 use clap::{Parser, Subcommand};
+use quickmark::{
+    file::{load_multi, save_multi},
+    Bookmark,
+};
 use rayon::prelude::*;
-use quickmark::{file::{load_multi, save_multi}, Bookmark};
 
 #[derive(Parser)]
 #[command(about = "A simple bookmark manager")]
 struct Cli {
     /// File to store bookmarks
-    #[arg(short, long)]
-    filename: Option<String>,
+    #[arg(short, long, default_value = "bookmarks.qm")]
+    filename: String,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -34,11 +37,12 @@ enum Commands {
         /// Index of the bookmark to remove
         index: usize,
     },
-    /// Search for bookmarks by tag
+    /// Search for bookmarks by tag (default) or fuzzy-find
     Search {
-        /// Query
+        /// Query to match against
         query: String,
 
+        /// Fuzzy search the whole bookmark. Compares the query against each bookmark's serialized form
         #[clap(short, long)]
         fuzzy: bool,
     },
@@ -85,16 +89,14 @@ fn cmd_search(filename: &str, query: &str, fuzzy: bool) {
         .for_each(|b| {
             println!("{}", b.pretty());
         });
-    
 }
 pub fn run_cli() {
     let args = Cli::parse();
-    let filename = args.filename.unwrap_or("bookmarks.qm".to_owned());
     match args.command {
-        Some(Commands::List { n }) => cmd_list(&filename, n),
-        Some(Commands::Add { name, url, tags }) => cmd_add(&filename, &name, &url, tags),
-        Some(Commands::Remove { index }) => cmd_remove(&filename, index),
-        Some(Commands::Search { query, fuzzy }) => cmd_search(&filename, &query, fuzzy),
+        Some(Commands::List { n }) => cmd_list(&args.filename, n),
+        Some(Commands::Add { name, url, tags }) => cmd_add(&args.filename, &name, &url, tags),
+        Some(Commands::Remove { index }) => cmd_remove(&args.filename, index),
+        Some(Commands::Search { query, fuzzy }) => cmd_search(&args.filename, &query, fuzzy),
         None => eprintln!("No command provided"),
     }
 }

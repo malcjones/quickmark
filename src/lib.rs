@@ -1,5 +1,5 @@
-use rayon::prelude::*;
 use colored::Colorize;
+use rayon::prelude::*;
 
 pub mod file;
 
@@ -36,9 +36,13 @@ impl Bookmark {
     }
 
     pub fn pretty(&self) -> String {
-        format!("{} [{}] -> {}", self.name, self.tag_string(true), self.url.blue())
+        format!(
+            "{} [{}] -> {}",
+            self.name,
+            self.tag_string(true),
+            self.url.blue()
+        )
     }
-
 
     pub fn new<'a>(name: &str, url: &str, tags: Vec<String>) -> Self {
         Self {
@@ -61,7 +65,6 @@ impl Bookmark {
     }
 }
 
-
 /// Serialize a vector of bookmarks into a single string, one per line
 pub fn serialize_vec(bookmarks: Vec<Bookmark>) -> String {
     bookmarks
@@ -73,7 +76,5 @@ pub fn serialize_vec(bookmarks: Vec<Bookmark>) -> String {
 
 /// Deserialize bookmarks encoded as a string, one per line
 pub fn deserialize_multi(data: String) -> Vec<Bookmark> {
-    data.par_lines()
-        .filter_map(Bookmark::deserialize)
-        .collect()
+    data.par_lines().filter_map(Bookmark::deserialize).collect()
 }
