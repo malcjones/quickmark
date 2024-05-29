@@ -1,7 +1,12 @@
 use colored::Colorize;
+use lazy_static::lazy_static;
 use rayon::prelude::*;
 
 pub mod file;
+
+lazy_static! {
+    pub static ref COLOR: bool = atty::is(atty::Stream::Stdout);
+}
 
 pub struct Bookmark {
     pub name: String,
@@ -35,20 +40,17 @@ impl Bookmark {
         format!("{}|{}|{}", &self.name, &self.url, self.tag_string(false))
     }
 
+    /// Return a pretty string representation of the bookmark
     pub fn pretty(&self) -> String {
-        format!(
-            "{} [{}] -> {}",
-            self.name,
-            self.tag_string(true),
-            self.url.blue()
-        )
-    }
-
-    pub fn new<'a>(name: &str, url: &str, tags: Vec<String>) -> Self {
-        Self {
-            name: name.to_owned(),
-            url: url.to_owned(),
-            tags,
+        if *COLOR {
+            format!(
+                "{} - {} ({})",
+                self.name.yellow(),
+                self.url.blue(),
+                self.tag_string(true)
+            )
+        } else {
+            format!("{} - {} ({})", self.name, self.url, self.tag_string(false))
         }
     }
 
@@ -63,18 +65,4 @@ impl Bookmark {
             self.tags.join(",")
         }
     }
-}
-
-/// Serialize a vector of bookmarks into a single string, one per line
-pub fn serialize_vec(bookmarks: Vec<Bookmark>) -> String {
-    bookmarks
-        .par_iter()
-        .map(|b| b.serialize())
-        .collect::<Vec<String>>()
-        .join("\n")
-}
-
-/// Deserialize bookmarks encoded as a string, one per line
-pub fn deserialize_multi(data: String) -> Vec<Bookmark> {
-    data.par_lines().filter_map(Bookmark::deserialize).collect()
 }
