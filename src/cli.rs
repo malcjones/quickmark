@@ -3,7 +3,6 @@ use quickmark::{
     file::{load_bulk, save_bulk},
     Bookmark,
 };
-use rayon::prelude::*;
 
 #[derive(Parser)]
 #[command(about = "A simple bookmark manager")]
@@ -84,7 +83,7 @@ fn cmd_search(filename: &str, query: &str, fuzzy: bool) {
     let bookmarks = load_bulk(filename).unwrap_or_default();
     let query = query.to_lowercase();
     bookmarks
-        .par_iter()
+        .iter()
         .filter(|b| {
             if fuzzy {
                 b.serialize().to_lowercase().contains(&query)
